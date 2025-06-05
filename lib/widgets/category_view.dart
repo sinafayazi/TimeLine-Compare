@@ -12,7 +12,7 @@ class CategoryView extends StatelessWidget {
     return Consumer<TimelineProvider>(
       builder: (context, provider, child) {
         final eventsByCategory = provider.eventsByCategory;
-        
+
         if (eventsByCategory.isEmpty) {
           return Center(
             child: Column(
@@ -21,20 +21,26 @@ class CategoryView extends StatelessWidget {
                 Icon(
                   Icons.category,
                   size: 64,
-                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.primary.withValues(alpha: 0.5),
                 ),
                 const SizedBox(height: 16),
                 Text(
                   'No events found',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Try adjusting your search or selecting different timelines',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.5),
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -49,11 +55,8 @@ class CategoryView extends StatelessWidget {
           itemBuilder: (context, index) {
             final category = eventsByCategory.keys.elementAt(index);
             final events = eventsByCategory[category]!;
-            
-            return _CategorySection(
-              category: category,
-              events: events,
-            );
+
+            return _CategorySection(category: category, events: events);
           },
         );
       },
@@ -65,10 +68,7 @@ class _CategorySection extends StatefulWidget {
   final String category;
   final List<TimelineEvent> events;
 
-  const _CategorySection({
-    required this.category,
-    required this.events,
-  });
+  const _CategorySection({required this.category, required this.events});
 
   @override
   State<_CategorySection> createState() => _CategorySectionState();
@@ -97,7 +97,9 @@ class _CategorySectionState extends State<_CategorySection> {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: categoryColor.withValues(alpha: 0.1),
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(12),
+                ),
               ),
               child: Row(
                 children: [
@@ -107,11 +109,7 @@ class _CategorySectionState extends State<_CategorySection> {
                       color: categoryColor,
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Icon(
-                      categoryIcon,
-                      color: Colors.white,
-                      size: 20,
-                    ),
+                    child: Icon(categoryIcon, color: Colors.white, size: 20),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -120,16 +118,20 @@ class _CategorySectionState extends State<_CategorySection> {
                       children: [
                         Text(
                           widget.category,
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: categoryColor,
-                          ),
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: categoryColor,
+                              ),
                         ),
                         Text(
                           '${widget.events.length} event${widget.events.length != 1 ? 's' : ''}',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                          ),
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withValues(alpha: 0.7),
+                              ),
                         ),
                       ],
                     ),
@@ -147,10 +149,12 @@ class _CategorySectionState extends State<_CategorySection> {
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: widget.events
-                    .map((event) => _CategoryEventCard(
-                          event: event,
-                          categoryColor: categoryColor,
-                        ))
+                    .map(
+                      (event) => _CategoryEventCard(
+                        event: event,
+                        categoryColor: categoryColor,
+                      ),
+                    )
                     .toList(),
               ),
             ),
@@ -196,10 +200,7 @@ class _CategoryEventCard extends StatelessWidget {
   final TimelineEvent event;
   final Color categoryColor;
 
-  const _CategoryEventCard({
-    required this.event,
-    required this.categoryColor,
-  });
+  const _CategoryEventCard({required this.event, required this.categoryColor});
 
   @override
   Widget build(BuildContext context) {
@@ -233,18 +234,12 @@ class _CategoryEventCard extends StatelessWidget {
                   event.title,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: event.isImportant 
-                        ? categoryColor
-                        : null,
+                    color: event.isImportant ? categoryColor : null,
                   ),
                 ),
               ),
               if (event.isImportant)
-                Icon(
-                  Icons.star,
-                  color: categoryColor,
-                  size: 20,
-                ),
+                Icon(Icons.star, color: categoryColor, size: 20),
             ],
           ),
           const SizedBox(height: 8),
@@ -254,7 +249,7 @@ class _CategoryEventCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  DateFormat('MMMM d, y').format(event.date),
+                  DateFormat('MMMM d, y').format(event.startDate),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: categoryColor,
                     fontWeight: FontWeight.w600,
@@ -285,11 +280,12 @@ class _CategoryEventCard extends StatelessWidget {
                         ),
                         child: Text(
                           tag,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: categoryColor,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                          ),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: categoryColor,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                              ),
                         ),
                       );
                     }).toList(),

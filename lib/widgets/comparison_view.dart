@@ -12,7 +12,7 @@ class ComparisonView extends StatelessWidget {
     return Consumer<TimelineProvider>(
       builder: (context, provider, child) {
         final timelines = provider.selectedTimelines;
-        
+
         if (timelines.length < 2) {
           return Center(
             child: Column(
@@ -21,20 +21,26 @@ class ComparisonView extends StatelessWidget {
                 Icon(
                   Icons.compare_arrows,
                   size: 64,
-                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.primary.withValues(alpha: 0.5),
                 ),
                 const SizedBox(height: 16),
                 Text(
                   'Select at least 2 timelines',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Comparison view requires multiple timelines to show side-by-side events',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.5),
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -45,11 +51,9 @@ class ComparisonView extends StatelessWidget {
 
         // Group events by time periods for comparison
         final groupedEvents = _groupEventsByPeriod(provider.filteredEvents);
-        
+
         if (groupedEvents.isEmpty) {
-          return const Center(
-            child: Text('No events to compare'),
-          );
+          return const Center(child: Text('No events to compare'));
         }
 
         return ListView.builder(
@@ -58,7 +62,7 @@ class ComparisonView extends StatelessWidget {
           itemBuilder: (context, index) {
             final period = groupedEvents.keys.elementAt(index);
             final events = groupedEvents[period]!;
-            
+
             return _ComparisonSection(
               period: period,
               events: events,
@@ -70,28 +74,29 @@ class ComparisonView extends StatelessWidget {
     );
   }
 
-  Map<String, List<TimelineEvent>> _groupEventsByPeriod(List<TimelineEvent> events) {
+  Map<String, List<TimelineEvent>> _groupEventsByPeriod(
+    List<TimelineEvent> events,
+  ) {
     final Map<String, List<TimelineEvent>> grouped = {};
-    
+
     for (final event in events) {
       // Group by decade
-      final decade = (event.date.year ~/ 10) * 10;
+      final decade = (event.startDate.year ~/ 10) * 10;
       final periodKey = '${decade}s';
-      
+
       if (grouped[periodKey] == null) {
         grouped[periodKey] = [];
       }
       grouped[periodKey]!.add(event);
     }
-    
+
     // Sort events within each period
     for (final eventList in grouped.values) {
-      eventList.sort((a, b) => a.date.compareTo(b.date));
+      eventList.sort((a, b) => a.startDate.compareTo(b.startDate));
     }
-    
+
     return Map.fromEntries(
-      grouped.entries.toList()
-        ..sort((a, b) => a.key.compareTo(b.key)),
+      grouped.entries.toList()..sort((a, b) => a.key.compareTo(b.key)),
     );
   }
 }
@@ -130,7 +135,7 @@ class _ComparisonSection extends StatelessWidget {
                 final timelineEvents = events.where((event) {
                   return timeline.events.any((e) => e.id == event.id);
                 }).toList();
-                
+
                 return Expanded(
                   child: _TimelineColumn(
                     timeline: timeline,
@@ -150,10 +155,7 @@ class _TimelineColumn extends StatelessWidget {
   final Timeline timeline;
   final List<TimelineEvent> events;
 
-  const _TimelineColumn({
-    required this.timeline,
-    required this.events,
-  });
+  const _TimelineColumn({required this.timeline, required this.events});
 
   @override
   Widget build(BuildContext context) {
@@ -181,16 +183,22 @@ class _TimelineColumn extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                color: Theme.of(
+                  context,
+                ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.outline.withValues(alpha: 0.2),
                 ),
               ),
               child: Text(
                 'No events in this period',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.6),
                   fontStyle: FontStyle.italic,
                 ),
               ),
@@ -228,9 +236,9 @@ class _ComparisonEventCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   event.title,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
                 ),
               ),
               if (event.isImportant)
@@ -243,7 +251,7 @@ class _ComparisonEventCard extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            DateFormat('MMM d, y').format(event.date),
+            DateFormat('MMM d, y').format(event.startDate),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: Theme.of(context).colorScheme.primary,
               fontWeight: FontWeight.w500,

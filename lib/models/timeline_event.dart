@@ -2,19 +2,19 @@ class TimelineEvent {
   final String id;
   final String title;
   final String description;
-  final DateTime date;
+  final DateTime startDate;
+  final DateTime? endDate;
   final String category;
   final String? imageUrl;
   final List<String> tags;
   final bool isImportant;
 
-  var details;
-
   TimelineEvent({
     required this.id,
     required this.title,
     required this.description,
-    required this.date,
+    required this.startDate,
+    this.endDate,
     required this.category,
     this.imageUrl,
     this.tags = const [],
@@ -27,7 +27,8 @@ class TimelineEvent {
       'id': id,
       'title': title,
       'description': description,
-      'date': date.toIso8601String(),
+      'startDate': startDate.toIso8601String(),
+      'endDate': endDate?.toIso8601String(),
       'category': category,
       'imageUrl': imageUrl,
       'tags': tags,
@@ -41,7 +42,8 @@ class TimelineEvent {
       id: json['id'],
       title: json['title'],
       description: json['description'],
-      date: DateTime.parse(json['date']),
+      startDate: DateTime.parse(json['startDate']),
+      endDate: json['endDate'] != null ? DateTime.parse(json['endDate']) : null,
       category: json['category'],
       imageUrl: json['imageUrl'],
       tags: List<String>.from(json['tags'] ?? []),
@@ -63,7 +65,8 @@ class TimelineEvent {
       id: id ?? this.id,
       title: title ?? this.title,
       description: description ?? this.description,
-      date: date ?? this.date,
+      startDate: startDate,
+      endDate: endDate ?? endDate,
       category: category ?? this.category,
       imageUrl: imageUrl ?? this.imageUrl,
       tags: tags ?? this.tags,

@@ -13,7 +13,7 @@ class TimelineView extends StatelessWidget {
     return Consumer<TimelineProvider>(
       builder: (context, provider, child) {
         final events = provider.filteredEvents;
-        
+
         if (events.isEmpty) {
           return Center(
             child: Column(
@@ -22,20 +22,26 @@ class TimelineView extends StatelessWidget {
                 Icon(
                   Icons.timeline,
                   size: 64,
-                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.primary.withValues(alpha: 0.5),
                 ),
                 const SizedBox(height: 16),
                 Text(
                   'No events found',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Try adjusting your search or selecting different timelines',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.5),
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -51,7 +57,7 @@ class TimelineView extends StatelessWidget {
             final event = events[index];
             final isFirst = index == 0;
             final isLast = index == events.length - 1;
-            
+
             return TimelineTile(
               alignment: TimelineAlign.manual,
               lineXY: 0.1,
@@ -67,7 +73,9 @@ class TimelineView extends StatelessWidget {
                 ),
               ),
               beforeLineStyle: LineStyle(
-                color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
+                color: Theme.of(
+                  context,
+                ).colorScheme.outline.withValues(alpha: 0.3),
                 thickness: 2,
               ),
               endChild: _EventCard(event: event),
@@ -128,7 +136,7 @@ class _EventCard extends StatelessWidget {
                       event.title,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: event.isImportant 
+                        color: event.isImportant
                             ? Theme.of(context).colorScheme.primary
                             : null,
                       ),
@@ -144,7 +152,7 @@ class _EventCard extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                DateFormat('MMMM d, y').format(event.date),
+                DateFormat('MMMM d, y').format(event.startDate),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Theme.of(context).colorScheme.primary,
                   fontWeight: FontWeight.w500,
@@ -186,14 +194,16 @@ class _EventCard extends StatelessWidget {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.surfaceContainerHighest,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
                             tag,
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              fontSize: 10,
-                            ),
+                            style: Theme.of(
+                              context,
+                            ).textTheme.bodySmall?.copyWith(fontSize: 10),
                           ),
                         );
                       }).toList(),

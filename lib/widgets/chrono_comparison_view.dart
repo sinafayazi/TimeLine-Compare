@@ -25,7 +25,7 @@ class _ChronoComparisonViewState extends State<ChronoComparisonView>
   double _zoomLevel = 1.0;
   final double _minZoom = 0.5;
   final double _maxZoom = 5.0;
-  double _baseYearHeight = 120.0;
+  final double _baseYearHeight = 120.0;
 
   // Pinch zoom properties
   double _startZoom = 1.0;
@@ -72,10 +72,11 @@ class _ChronoComparisonViewState extends State<ChronoComparisonView>
   Map<String, double> _calculatePerspectiveEffects(
     double itemY,
     double screenHeight,
+    double screenWidth,
     bool isLeftSide,
   ) {
     final screenCenter = _scrollOffset + screenHeight / 2;
-    final distanceFromCenter = itemY - screenCenter;
+    final distanceFromCenter = (itemY - screenCenter).abs();
     final normalizedPosition = distanceFromCenter / (screenHeight / 2);
 
     // Calculate vertical position (0 = top, 1 = bottom of visible area)
@@ -85,7 +86,7 @@ class _ChronoComparisonViewState extends State<ChronoComparisonView>
     );
 
     // Cylindrical perspective calculations
-    final angle = normalizedPosition * math.pi / 3; // Max 60 degrees rotation
+    final angle = normalizedPosition * math.pi / 2; // Max 60 degrees rotation
     final depth = math.cos(angle.clamp(-math.pi / 2, math.pi / 2));
 
     // Scale based on depth
@@ -107,10 +108,10 @@ class _ChronoComparisonViewState extends State<ChronoComparisonView>
     double horizontalOffset;
     if (isLeftSide) {
       // Left side: start from right, curve to left
-      horizontalOffset = math.sin(angle) * 100;
+      horizontalOffset = math.sin(angle) * screenWidth / 8 - 20;
     } else {
       // Right side: start from left, curve to right
-      horizontalOffset = -math.sin(angle) * 100;
+      horizontalOffset = -math.sin(angle) * screenWidth / 8 + 20;
     }
 
     return {
@@ -124,9 +125,10 @@ class _ChronoComparisonViewState extends State<ChronoComparisonView>
   }
 
   // Handle keyboard shortcuts for zoom
-  void _handleKeyEvent(RawKeyEvent event) {
-    if (event is RawKeyDownEvent) {
-      if (event.isControlPressed) {
+  void _handleKeyEvent(KeyEvent event) {
+    if (event is KeyDownEvent) {
+      if (event.logicalKey == LogicalKeyboardKey.controlLeft ||
+          event.logicalKey == LogicalKeyboardKey.controlRight) {
         if (event.logicalKey == LogicalKeyboardKey.equal ||
             event.logicalKey == LogicalKeyboardKey.add) {
           _updateZoom(_zoomLevel * 1.2);
@@ -266,11 +268,13 @@ class _ChronoComparisonViewState extends State<ChronoComparisonView>
         }
 
         final earliestYear =
-            allEvents.map((e) => e.date.year).reduce((a, b) => a < b ? a : b) -
+            allEvents
+                .map((e) => e.startDate.year)
+                .reduce((a, b) => a < b ? a : b) -
             5;
         final latestYear =
             allEvents
-                .map((e) => e.endDate?.year ?? e.date.year)
+                .map((e) => e.endDate?.year ?? e.startDate.year)
                 .reduce((a, b) => a > b ? a : b) +
             5;
         final totalHeight = (latestYear - earliestYear) * _yearHeight;
@@ -278,9 +282,9 @@ class _ChronoComparisonViewState extends State<ChronoComparisonView>
         return Scaffold(
           backgroundColor: const Color(0xFF0A0E27),
           appBar: _buildAppBar(context, provider, category1, category2),
-          body: RawKeyboardListener(
+          body: KeyboardListener(
             focusNode: _focusNode,
-            onKey: _handleKeyEvent,
+            onKeyEvent: _handleKeyEvent,
             child: GestureDetector(
               onScaleStart: (details) {
                 _startZoom = _zoomLevel;
@@ -316,7 +320,7 @@ class _ChronoComparisonViewState extends State<ChronoComparisonView>
                         SingleChildScrollView(
                           controller: _scrollController,
                           physics: const BouncingScrollPhysics(),
-                          child: Container(
+                          child: SizedBox(
                             height: totalHeight + screenHeight * 2,
                             child: Stack(
                               children: [
@@ -375,7 +379,7 @@ class _ChronoComparisonViewState extends State<ChronoComparisonView>
   ) {
     return AppBar(
       elevation: 0,
-      backgroundColor: const Color(0xFF0A0E27).withOpacity(0.8),
+      backgroundColor: const Color(0xFF0A0E27).withValues(alpha: 0.8),
       toolbarHeight: 80,
       flexibleSpace: Container(
         decoration: BoxDecoration(
@@ -384,7 +388,7 @@ class _ChronoComparisonViewState extends State<ChronoComparisonView>
             end: Alignment.bottomCenter,
             colors: [
               const Color(0xFF1A1F3A),
-              const Color(0xFF0A0E27).withOpacity(0.8),
+              const Color(0xFF0A0E27).withValues(alpha: 0.8),
             ],
           ),
         ),
@@ -411,7 +415,7 @@ class _ChronoComparisonViewState extends State<ChronoComparisonView>
                 child: Icon(
                   Icons.sync_alt,
                   size: 20,
-                  color: Colors.white.withOpacity(0.5),
+                  color: Colors.white.withValues(alpha: 0.5),
                 ),
               ),
               _buildCategoryChip(category2, Colors.purpleAccent),
@@ -421,7 +425,7 @@ class _ChronoComparisonViewState extends State<ChronoComparisonView>
       ),
       centerTitle: true,
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back, color: Colors.white),
+        icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
         onPressed: () => provider.setCurrentView('category_selection'),
       ),
       actions: [
@@ -438,10 +442,10 @@ class _ChronoComparisonViewState extends State<ChronoComparisonView>
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [color.withOpacity(0.3), color.withOpacity(0.1)],
+          colors: [color.withValues(alpha: 0.3), color.withValues(alpha: 0.1)],
         ),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.5)),
+        border: Border.all(color: color.withValues(alpha: 0.5)),
       ),
       child: Text(
         category,
@@ -477,6 +481,7 @@ class _ChronoComparisonViewState extends State<ChronoComparisonView>
             final effects = _calculatePerspectiveEffects(
               markerY,
               screenHeight,
+              screenWidth,
               true,
             );
 
@@ -490,10 +495,10 @@ class _ChronoComparisonViewState extends State<ChronoComparisonView>
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
-                            Colors.white.withOpacity(0.1),
-                            Colors.white.withOpacity(0.3),
-                            Colors.white.withOpacity(0.3),
-                            Colors.white.withOpacity(0.1),
+                            Colors.white.withValues(alpha: 0.1),
+                            Colors.white.withValues(alpha: 0.3),
+                            Colors.white.withValues(alpha: 0.3),
+                            Colors.white.withValues(alpha: 0.1),
                           ],
                         ),
                       ),
@@ -507,10 +512,10 @@ class _ChronoComparisonViewState extends State<ChronoComparisonView>
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF1A1F3A).withOpacity(0.8),
+                        color: const Color(0xFF1A1F3A).withValues(alpha: 0.8),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withValues(alpha: 0.2),
                         ),
                       ),
                       child: Text(
@@ -518,7 +523,7 @@ class _ChronoComparisonViewState extends State<ChronoComparisonView>
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w500,
-                          color: Colors.white.withOpacity(0.7),
+                          color: Colors.white.withValues(alpha: 0.7),
                           letterSpacing: 0.5,
                         ),
                       ),
@@ -530,10 +535,10 @@ class _ChronoComparisonViewState extends State<ChronoComparisonView>
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
-                            Colors.white.withOpacity(0.1),
-                            Colors.white.withOpacity(0.3),
-                            Colors.white.withOpacity(0.3),
-                            Colors.white.withOpacity(0.1),
+                            Colors.white.withValues(alpha: 0.1),
+                            Colors.white.withValues(alpha: 0.3),
+                            Colors.white.withValues(alpha: 0.3),
+                            Colors.white.withValues(alpha: 0.1),
                           ],
                         ),
                       ),
@@ -611,14 +616,15 @@ class _ChronoComparisonViewState extends State<ChronoComparisonView>
   ) {
     return events.map((event) {
       final startY =
-          screenHeight + ((event.date.year - earliestYear) * _yearHeight);
+          screenHeight + ((event.startDate.year - earliestYear) * _yearHeight);
       final endY = event.endDate != null
           ? screenHeight + ((event.endDate!.year - earliestYear) * _yearHeight)
           : startY;
+      final centerY = (startY + endY) / 2;
 
       return EventData(
         event: event,
-        startY: startY,
+        centerY: centerY,
         endY: endY,
         isLeftSide: isLeftSide,
       );
@@ -642,24 +648,20 @@ class _ChronoComparisonViewState extends State<ChronoComparisonView>
       animation: _scrollController,
       builder: (context, child) {
         final effects = _calculatePerspectiveEffects(
-          eventData.startY,
+          eventData.centerY,
           screenHeight,
+          containerWidth,
           isLeftSide,
         );
 
         return Positioned(
-          top: eventData.startY,
+          top: eventData.centerY,
           left: isLeftSide ? 0 : containerWidth,
           width: containerWidth,
-          height: eventData.endY - eventData.startY + 100,
+          height: eventData.endY - eventData.centerY + 100,
           child: Transform(
             transform: Matrix4.identity()
-              ..translate(
-                isLeftSide
-                    ? effects['horizontalOffset']!
-                    : -effects['horizontalOffset']!,
-                0,
-              )
+              ..translate(effects['horizontalOffset']!, 0)
               ..scale(effects['scale']!),
             alignment: isLeftSide
                 ? Alignment.centerRight
@@ -680,16 +682,17 @@ class _ChronoComparisonViewState extends State<ChronoComparisonView>
                 // Sub-events (if zoomed in)
                 if (showSubEvents)
                   ...eventData.event.subEvents!.asMap().entries.map((entry) {
-                    final index = entry.key;
+                    final _ = entry.key;
                     final subEvent = entry.value;
                     final subEventY =
-                        eventData.startY +
-                        ((subEvent.date.year - eventData.event.date.year) *
+                        eventData.centerY +
+                        ((subEvent.startDate.year -
+                                eventData.event.startDate.year) *
                             _yearHeight) +
-                        (subEvent.date.month / 12 * _yearHeight);
+                        (subEvent.startDate.month / 12 * _yearHeight);
 
                     return Positioned(
-                      top: subEventY - eventData.startY + 40,
+                      top: subEventY - eventData.centerY + 40,
                       left: isLeftSide ? 40 : 20,
                       right: isLeftSide ? 20 : 40,
                       child: _buildEventCard(
@@ -697,7 +700,7 @@ class _ChronoComparisonViewState extends State<ChronoComparisonView>
                         subEvent,
                         effects,
                         isLeftSide,
-                        accentColor.withOpacity(0.7),
+                        accentColor.withValues(alpha: 0.7),
                         containerWidth - 60,
                         isMainEvent: false,
                       ),
@@ -738,7 +741,12 @@ class _ChronoComparisonViewState extends State<ChronoComparisonView>
               duration: const Duration(milliseconds: 300),
               opacity: opacity,
               child: Container(
-                height: isMainEvent ? 100 : 60,
+                height: isMainEvent
+                    ? ((event.endDate?.year ?? event.startDate.year + 1) -
+                              event.startDate.year) *
+                          _yearHeight *
+                          _zoomLevel
+                    : 60,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: isLeftSide
@@ -748,13 +756,13 @@ class _ChronoComparisonViewState extends State<ChronoComparisonView>
                         ? Alignment.centerRight
                         : Alignment.centerLeft,
                     colors: [
-                      accentColor.withOpacity(0.2),
-                      accentColor.withOpacity(0.05),
+                      accentColor.withValues(alpha: 0.2),
+                      accentColor.withValues(alpha: 0.05),
                     ],
                   ),
                   borderRadius: BorderRadius.circular(isMainEvent ? 16 : 12),
                   border: Border.all(
-                    color: accentColor.withOpacity(0.3),
+                    color: accentColor.withValues(alpha: 0.3),
                     width: isMainEvent ? 1 : 0.5,
                   ),
                 ),
@@ -784,7 +792,7 @@ class _ChronoComparisonViewState extends State<ChronoComparisonView>
                               style: TextStyle(
                                 fontSize: isMainEvent ? 14 : 12,
                                 fontWeight: FontWeight.w600,
-                                color: Colors.white.withOpacity(0.9),
+                                color: Colors.white.withValues(alpha: 0.9),
                               ),
                               maxLines: isMainEvent ? 2 : 1,
                               overflow: TextOverflow.ellipsis,
@@ -819,7 +827,7 @@ class _ChronoComparisonViewState extends State<ChronoComparisonView>
 
   String _formatEventDate(TimelineEvent event) {
     final startDate =
-        '${event.date.day}/${event.date.month}/${event.date.year}';
+        '${event.startDate.day}/${event.startDate.month}/${event.startDate.year}';
     if (event.endDate != null) {
       final endDate =
           '${event.endDate!.day}/${event.endDate!.month}/${event.endDate!.year}';
@@ -832,9 +840,9 @@ class _ChronoComparisonViewState extends State<ChronoComparisonView>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1F3A).withOpacity(0.8),
+        color: const Color(0xFF1A1F3A).withValues(alpha: 0.8),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.2)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -905,7 +913,7 @@ class _ChronoComparisonViewState extends State<ChronoComparisonView>
       child: BackdropFilter(
         filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: Container(
-          color: Colors.black.withOpacity(0.7),
+          color: Colors.black.withValues(alpha: 0.7),
           child: Center(
             child: GestureDetector(
               onTap: () {},
@@ -923,7 +931,7 @@ class _ChronoComparisonViewState extends State<ChronoComparisonView>
                   ),
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(
-                    color: accentColor.withOpacity(0.3),
+                    color: accentColor.withValues(alpha: 0.3),
                     width: 1,
                   ),
                 ),
@@ -966,7 +974,7 @@ class _ChronoComparisonViewState extends State<ChronoComparisonView>
                                       vertical: 6,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: accentColor.withOpacity(0.2),
+                                      color: accentColor.withValues(alpha: 0.2),
                                       borderRadius: BorderRadius.circular(20),
                                     ),
                                     child: Text(
@@ -981,7 +989,9 @@ class _ChronoComparisonViewState extends State<ChronoComparisonView>
                                   Text(
                                     _formatEventDate(event),
                                     style: TextStyle(
-                                      color: Colors.white.withOpacity(0.7),
+                                      color: Colors.white.withValues(
+                                        alpha: 0.7,
+                                      ),
                                       fontSize: 14,
                                     ),
                                   ),
@@ -991,7 +1001,7 @@ class _ChronoComparisonViewState extends State<ChronoComparisonView>
                               Text(
                                 event.description,
                                 style: TextStyle(
-                                  color: Colors.white.withOpacity(0.8),
+                                  color: Colors.white.withValues(alpha: 0.8),
                                   fontSize: 16,
                                   height: 1.6,
                                 ),
@@ -1004,7 +1014,7 @@ class _ChronoComparisonViewState extends State<ChronoComparisonView>
                                   style: TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.w600,
-                                    color: Colors.white.withOpacity(0.9),
+                                    color: Colors.white.withValues(alpha: 0.9),
                                   ),
                                 ),
                                 const SizedBox(height: 12),
@@ -1013,7 +1023,9 @@ class _ChronoComparisonViewState extends State<ChronoComparisonView>
                                     margin: const EdgeInsets.only(bottom: 8),
                                     padding: const EdgeInsets.all(12),
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.05),
+                                      color: Colors.white.withValues(
+                                        alpha: 0.05,
+                                      ),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Column(
@@ -1056,7 +1068,9 @@ class _ChronoComparisonViewState extends State<ChronoComparisonView>
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(24),
                               ),
-                              backgroundColor: accentColor.withOpacity(0.2),
+                              backgroundColor: accentColor.withValues(
+                                alpha: 0.2,
+                              ),
                             ),
                             child: Text(
                               'Close',
@@ -1090,13 +1104,13 @@ class TimeMarker {
 
 class EventData {
   final TimelineEvent event;
-  final double startY;
+  final double centerY;
   final double endY;
   final bool isLeftSide;
 
   EventData({
     required this.event,
-    required this.startY,
+    required this.centerY,
     required this.endY,
     required this.isLeftSide,
   });

@@ -26,7 +26,7 @@ class TimelineProvider with ChangeNotifier {
     for (var timeline in _selectedTimelines) {
       events.addAll(timeline.events);
     }
-    events.sort((a, b) => a.date.compareTo(b.date));
+    events.sort((a, b) => a.startDate.compareTo(b.startDate));
     return events;
   }
 
@@ -35,9 +35,13 @@ class TimelineProvider with ChangeNotifier {
     if (_searchQuery.isEmpty) return allEvents;
     return allEvents.where((event) {
       return event.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          event.description.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          event.description.toLowerCase().contains(
+            _searchQuery.toLowerCase(),
+          ) ||
           event.category.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          event.tags.any((tag) => tag.toLowerCase().contains(_searchQuery.toLowerCase()));
+          event.tags.any(
+            (tag) => tag.toLowerCase().contains(_searchQuery.toLowerCase()),
+          );
     }).toList();
   }
 
@@ -150,7 +154,9 @@ class TimelineProvider with ChangeNotifier {
   Future<void> _saveData() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final timelinesJson = json.encode(_timelines.map((t) => t.toJson()).toList());
+      final timelinesJson = json.encode(
+        _timelines.map((t) => t.toJson()).toList(),
+      );
       await prefs.setString('timelines', timelinesJson);
     } catch (e) {
       debugPrint('Error saving timelines: $e');
@@ -169,39 +175,67 @@ class TimelineProvider with ChangeNotifier {
           events: [
             TimelineEvent(
               id: '1',
-              title: 'World War I Begins',
-              description: 'The assassination of Archduke Franz Ferdinand triggers the start of World War I',
-              date: DateTime(1914, 6, 28),
+              title: 'World War I',
+              description:
+                  'The Great War that began with the assassination of Archduke Franz Ferdinand and involved major world powers',
+              startDate: DateTime(1914, 7, 28),
+              endDate: DateTime(1918, 11, 11),
               category: 'War',
               isImportant: true,
-              tags: ['WWI', 'assassination', 'Austria-Hungary'],
+              tags: ['WWI', 'Great War', 'global conflict', 'Austria-Hungary'],
             ),
             TimelineEvent(
               id: '2',
-              title: 'Treaty of Versailles',
-              description: 'The peace treaty that ended World War I between Germany and the Allied Powers',
-              date: DateTime(1919, 6, 28),
-              category: 'Politics',
+              title: 'Battle of Verdun',
+              description:
+                  'One of the longest and most devastating battles of WWI between French and German forces',
+              startDate: DateTime(1916, 2, 21),
+              endDate: DateTime(1916, 12, 18),
+              category: 'War',
               isImportant: true,
-              tags: ['WWI', 'treaty', 'peace'],
+              tags: ['WWI', 'battle', 'France', 'Germany', 'Verdun'],
             ),
             TimelineEvent(
               id: '3',
-              title: 'World War II Begins',
-              description: 'Germany invades Poland, marking the beginning of World War II',
-              date: DateTime(1939, 9, 1),
-              category: 'War',
+              title: 'Treaty of Versailles',
+              description:
+                  'The peace treaty that officially ended World War I between Germany and the Allied Powers',
+              startDate: DateTime(1919, 6, 28),
+              category: 'Politics',
               isImportant: true,
-              tags: ['WWII', 'invasion', 'Germany', 'Poland'],
+              tags: ['WWI', 'treaty', 'peace', 'Germany', 'reparations'],
             ),
             TimelineEvent(
               id: '4',
-              title: 'D-Day Normandy Landings',
-              description: 'Allied forces land in Normandy, opening the Western Front in Europe',
-              date: DateTime(1944, 6, 6),
+              title: 'World War II',
+              description:
+                  'Global war that began with Germany\'s invasion of Poland and ended with Allied victory',
+              startDate: DateTime(1939, 9, 1),
+              endDate: DateTime(1945, 9, 2),
               category: 'War',
               isImportant: true,
-              tags: ['WWII', 'D-Day', 'Normandy', 'Allied'],
+              tags: ['WWII', 'global war', 'Holocaust', 'Allied Powers'],
+            ),
+            TimelineEvent(
+              id: '5',
+              title: 'Pearl Harbor Attack',
+              description:
+                  'Surprise military strike by Japan against the US naval base, bringing America into WWII',
+              startDate: DateTime(1941, 12, 7),
+              category: 'War',
+              isImportant: true,
+              tags: ['WWII', 'Pearl Harbor', 'Japan', 'USA', 'Pacific War'],
+            ),
+            TimelineEvent(
+              id: '6',
+              title: 'D-Day Normandy Landings',
+              description:
+                  'Allied invasion of Nazi-occupied Western Europe, opening the Western Front',
+              startDate: DateTime(1944, 6, 6),
+              endDate: DateTime(1944, 8, 30),
+              category: 'War',
+              isImportant: true,
+              tags: ['WWII', 'D-Day', 'Normandy', 'Allied', 'invasion'],
             ),
           ],
         ),
@@ -213,38 +247,185 @@ class TimelineProvider with ChangeNotifier {
           updatedAt: DateTime.now(),
           events: [
             TimelineEvent(
-              id: '5',
-              title: 'Sputnik 1 Launch',
-              description: 'Soviet Union launches the first artificial satellite',
-              date: DateTime(1957, 10, 4),
-              category: 'Science',
-              isImportant: true,
-              tags: ['space', 'satellite', 'Soviet Union'],
-            ),
-            TimelineEvent(
-              id: '6',
-              title: 'First Human in Space',
-              description: 'Yuri Gagarin becomes the first human to travel to space',
-              date: DateTime(1961, 4, 12),
-              category: 'Science',
-              isImportant: true,
-              tags: ['space', 'human', 'Gagarin', 'Soviet Union'],
-            ),
-            TimelineEvent(
               id: '7',
-              title: 'Moon Landing',
-              description: 'Apollo 11 mission successfully lands the first humans on the Moon',
-              date: DateTime(1969, 7, 20),
+              title: 'Sputnik 1 Launch',
+              description:
+                  'Soviet Union launches the first artificial satellite, beginning the Space Age',
+              startDate: DateTime(1957, 10, 4),
               category: 'Science',
               isImportant: true,
-              tags: ['space', 'moon', 'Apollo', 'NASA'],
+              tags: ['space', 'satellite', 'Soviet Union', 'Space Age'],
+            ),
+            TimelineEvent(
+              id: '8',
+              title: 'First Human in Space',
+              description:
+                  'Yuri Gagarin becomes the first human to travel to space aboard Vostok 1',
+              startDate: DateTime(1961, 4, 12),
+              category: 'Science',
+              isImportant: true,
+              tags: ['space', 'human spaceflight', 'Gagarin', 'Vostok', 'Soviet Union'],
+            ),
+            TimelineEvent(
+              id: '9',
+              title: 'Apollo 11 Moon Landing',
+              description:
+                  'First successful crewed mission to land on the Moon with Neil Armstrong and Buzz Aldrin',
+              startDate: DateTime(1969, 7, 16),
+              endDate: DateTime(1969, 7, 24),
+              category: 'Science',
+              isImportant: true,
+              tags: ['space', 'moon landing', 'Apollo', 'NASA', 'Armstrong', 'Aldrin'],
+            ),
+            TimelineEvent(
+              id: '10',
+              title: 'Space Shuttle Program',
+              description:
+                  'NASA\'s reusable spacecraft program that operated for 30 years',
+              startDate: DateTime(1981, 4, 12),
+              endDate: DateTime(2011, 7, 21),
+              category: 'Science',
+              isImportant: true,
+              tags: ['space shuttle', 'NASA', 'reusable spacecraft', 'ISS'],
+            ),
+            TimelineEvent(
+              id: '11',
+              title: 'International Space Station',
+              description:
+                  'Multi-national collaborative project and habitable artificial satellite in low Earth orbit',
+              startDate: DateTime(1998, 11, 20),
+              endDate: DateTime(2031, 1, 1), // Planned end date
+              category: 'Science',
+              isImportant: true,
+              tags: ['ISS', 'space station', 'international cooperation', 'orbital laboratory'],
+            ),
+          ],
+        ),
+        Timeline(
+          id: '3',
+          name: 'Technology Revolution',
+          description: 'Major technological breakthroughs that changed the world',
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+          events: [
+            TimelineEvent(
+              id: '12',
+              title: 'Internet Creation',
+              description:
+                  'ARPANET, the precursor to the modern internet, was established connecting universities and research institutions',
+              startDate: DateTime(1969, 10, 29),
+              category: 'Technology',
+              isImportant: true,
+              tags: ['internet', 'ARPANET', 'networking', 'communication'],
+            ),
+            TimelineEvent(
+              id: '13',
+              title: 'Personal Computer Revolution',
+              description:
+                  'Apple II launch marked the beginning of personal computing for everyday users',
+              startDate: DateTime(1977, 4, 16),
+              category: 'Technology',
+              isImportant: true,
+              tags: ['personal computer', 'Apple II', 'computing', 'microprocessor'],
+            ),
+            TimelineEvent(
+              id: '14',
+              title: 'World Wide Web',
+              description:
+                  'Tim Berners-Lee created the first web browser and web server, making the internet accessible to everyone',
+              startDate: DateTime(1990, 12, 20),
+              category: 'Technology',
+              isImportant: true,
+              tags: ['WWW', 'web browser', 'Tim Berners-Lee', 'hypertext'],
+            ),
+            TimelineEvent(
+              id: '15',
+              title: 'Smartphone Era',
+              description:
+                  'Apple iPhone launch revolutionized mobile computing and communication',
+              startDate: DateTime(2007, 1, 9),
+              category: 'Technology',
+              isImportant: true,
+              tags: ['smartphone', 'iPhone', 'mobile computing', 'touchscreen'],
+            ),
+            TimelineEvent(
+              id: '16',
+              title: 'AI and Machine Learning Boom',
+              description:
+                  'ChatGPT and other large language models brought AI to mainstream use',
+              startDate: DateTime(2022, 11, 30),
+              category: 'Technology',
+              isImportant: true,
+              tags: ['AI', 'machine learning', 'ChatGPT', 'LLM', 'OpenAI'],
+            ),
+          ],
+        ),
+        Timeline(
+          id: '4',
+          name: 'Medical Breakthroughs',
+          description: 'Revolutionary discoveries and treatments in medicine',
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+          events: [
+            TimelineEvent(
+              id: '17',
+              title: 'Discovery of Penicillin',
+              description:
+                  'Alexander Fleming discovered the first true antibiotic, revolutionizing treatment of bacterial infections',
+              startDate: DateTime(1928, 9, 3),
+              category: 'Medicine',
+              isImportant: true,
+              tags: ['penicillin', 'antibiotic', 'Fleming', 'bacteria', 'infection'],
+            ),
+            TimelineEvent(
+              id: '18',
+              title: 'First Polio Vaccine',
+              description:
+                  'Jonas Salk developed the first successful polio vaccine, leading to near-eradication of the disease',
+              startDate: DateTime(1955, 4, 12),
+              category: 'Medicine',
+              isImportant: true,
+              tags: ['polio vaccine', 'Salk', 'immunization', 'public health'],
+            ),
+            TimelineEvent(
+              id: '19',
+              title: 'First Heart Transplant',
+              description:
+                  'Christiaan Barnard performed the first successful human-to-human heart transplant in South Africa',
+              startDate: DateTime(1967, 12, 3),
+              category: 'Medicine',
+              isImportant: true,
+              tags: ['heart transplant', 'Barnard', 'surgery', 'organ transplant'],
+            ),
+            TimelineEvent(
+              id: '20',
+              title: 'Human Genome Project',
+              description:
+                  'International effort to sequence and map all human genes, revolutionizing personalized medicine',
+              startDate: DateTime(1990, 10, 1),
+              endDate: DateTime(2003, 4, 14),
+              category: 'Medicine',
+              isImportant: true,
+              tags: ['genome', 'DNA sequencing', 'genetics', 'personalized medicine'],
+            ),
+            TimelineEvent(
+              id: '21',
+              title: 'COVID-19 mRNA Vaccines',
+              description:
+                  'Rapid development of mRNA vaccines demonstrated new possibilities in vaccine technology',
+              startDate: DateTime(2020, 12, 11),
+              category: 'Medicine',
+              isImportant: true,
+              tags: ['COVID-19', 'mRNA vaccine', 'Pfizer', 'Moderna', 'pandemic'],
             ),
           ],
         ),
       ];
 
       _timelines = sampleTimelines;
-      _selectedTimelines = [sampleTimelines[0]]; // Select first timeline by default
+      _selectedTimelines = [
+        sampleTimelines[0],
+      ]; // Select first timeline by default
       _saveData();
       notifyListeners();
     }

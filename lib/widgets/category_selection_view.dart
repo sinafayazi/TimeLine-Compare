@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'dart:ui' as ui;
+import 'dart:math' as math;
 import '../providers/timeline_provider.dart';
 
 class CategorySelectionView extends StatefulWidget {
@@ -14,117 +16,150 @@ class _CategorySelectionViewState extends State<CategorySelectionView>
   String? _selectedCategory1;
   String? _selectedCategory2;
   late AnimationController _animationController;
+  late AnimationController _pulseController;
+  late AnimationController _particlesController;
   late Animation<double> _fadeAnimation;
+  late Animation<double> _pulseAnimation;
 
   @override
   void initState() {
     super.initState();
     _animationController = AnimationController(
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 1200),
       vsync: this,
     );
+    _pulseController = AnimationController(
+      duration: const Duration(seconds: 2),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    // Slower animation for particles
+    _particlesController = AnimationController(
+      duration: const Duration(seconds: 20),
+      vsync: this,
+    )..repeat();
+
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
+    _pulseAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+
     _animationController.forward();
   }
 
   @override
   void dispose() {
     _animationController.dispose();
+    _pulseController.dispose();
+    _particlesController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final _ = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
+
     return Consumer<TimelineProvider>(
       builder: (context, provider, child) {
         final categories = _getAvailableCategories(provider);
 
         return Scaffold(
-          // Background that extends to all edges for shadows and gradients
-          body: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Theme.of(
-                    context,
-                  ).colorScheme.primaryContainer.withValues(alpha: 0.3),
-                  Theme.of(
-                    context,
-                  ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.1),
-                ],
+          backgroundColor: const Color(0xFF0A0E27),
+          body: Stack(
+            children: [
+              // Animated background
+              Container(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    center: Alignment(0, -0.5),
+                    radius: 2,
+                    colors: [
+                      const Color(0xFF1A1F3A),
+                      const Color(0xFF0A0E27),
+                      const Color(0xFF050714),
+                    ],
+                  ),
+                ),
               ),
-            ),
-            child: FadeTransition(
-              opacity: _fadeAnimation,
-              child: Column(
-                children: [
-                  // Main content area with manual safe area positioning
-                  Expanded(
-                    child: SafeArea(
-                      top: false,
-                      bottom: false,
-                      child: Padding(
-                        padding: EdgeInsets.only(
-                          left: 20.0,
-                          right: 20.0,
-                          top: MediaQuery.of(context).padding.top,
-                        ),
-                        child: SingleChildScrollView(
+
+              // Animated particles background
+              CustomPaint(
+                size: MediaQuery.of(context).size,
+                painter: ParticlesPainter(animation: _particlesController),
+              ),
+
+              // Main content
+              FadeTransition(
+                opacity: _fadeAnimation,
+                child: Column(
+                  children: [
+                    // Content area
+                    Expanded(
+                      child: SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(),
+                        child: Padding(
+                          padding: EdgeInsets.only(
+                            left: isMobile ? 16.0 : 20.0,
+                            right: isMobile ? 16.0 : 20.0,
+                            top:
+                                MediaQuery.of(context).padding.top +
+                                (isMobile ? 16 : 20),
+                            bottom: 20,
+                          ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              const SizedBox(height: 20),
-                              // Header
-                              _buildHeader(context),
-                              const SizedBox(height: 40),
+                              // Header (smaller on mobile)
+                              _buildHeader(context, isMobile),
+                              SizedBox(height: isMobile ? 24 : 40),
 
-                              // Category Selection Cards
+                              // Category Selection
                               LayoutBuilder(
                                 builder: (context, constraints) {
                                   bool isNarrowScreen =
-                                      constraints.maxWidth < 600;
+                                      constraints.maxWidth < 700;
+
                                   if (isNarrowScreen) {
-                                    // Narrow screen: Use a Column
                                     return Column(
-                                      mainAxisSize: MainAxisSize.min,
                                       children: [
                                         _buildCategorySelector(
                                           context,
-                                          'First Timeline Category',
+                                          'First Timeline',
                                           _selectedCategory1,
                                           categories,
                                           (category) => setState(
                                             () => _selectedCategory1 = category,
                                           ),
-                                          Theme.of(context).colorScheme.primary,
+                                          Colors.cyanAccent,
                                           Icons.timeline,
                                           isNarrowScreen,
+                                          true,
+                                          isMobile,
                                         ),
-                                        const SizedBox(height: 20),
-                                        _buildVsIndicator(context),
-                                        const SizedBox(height: 20),
+                                        SizedBox(height: isMobile ? 20 : 30),
+                                        _buildVsIndicator(context, isMobile),
+                                        SizedBox(height: isMobile ? 20 : 30),
                                         _buildCategorySelector(
                                           context,
-                                          'Second Timeline Category',
+                                          'Second Timeline',
                                           _selectedCategory2,
                                           categories,
                                           (category) => setState(
                                             () => _selectedCategory2 = category,
                                           ),
-                                          Theme.of(
-                                            context,
-                                          ).colorScheme.secondary,
+                                          Colors.purpleAccent,
                                           Icons.compare_arrows,
                                           isNarrowScreen,
+                                          false,
+                                          isMobile,
                                         ),
                                       ],
                                     );
                                   } else {
-                                    // Wide screen: Use a Row
                                     return Row(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
@@ -132,38 +167,38 @@ class _CategorySelectionViewState extends State<CategorySelectionView>
                                         Flexible(
                                           child: _buildCategorySelector(
                                             context,
-                                            'First Timeline Category',
+                                            'First Timeline',
                                             _selectedCategory1,
                                             categories,
                                             (category) => setState(
                                               () =>
                                                   _selectedCategory1 = category,
                                             ),
-                                            Theme.of(
-                                              context,
-                                            ).colorScheme.primary,
+                                            Colors.cyanAccent,
                                             Icons.timeline,
                                             isNarrowScreen,
+                                            true,
+                                            isMobile,
                                           ),
                                         ),
-                                        const SizedBox(width: 20),
-                                        _buildVsIndicator(context),
-                                        const SizedBox(width: 20),
+                                        const SizedBox(width: 30),
+                                        _buildVsIndicator(context, isMobile),
+                                        const SizedBox(width: 30),
                                         Flexible(
                                           child: _buildCategorySelector(
                                             context,
-                                            'Second Timeline Category',
+                                            'Second Timeline',
                                             _selectedCategory2,
                                             categories,
                                             (category) => setState(
                                               () =>
                                                   _selectedCategory2 = category,
                                             ),
-                                            Theme.of(
-                                              context,
-                                            ).colorScheme.secondary,
+                                            Colors.purpleAccent,
                                             Icons.compare_arrows,
                                             isNarrowScreen,
+                                            false,
+                                            isMobile,
                                           ),
                                         ),
                                       ],
@@ -171,107 +206,135 @@ class _CategorySelectionViewState extends State<CategorySelectionView>
                                   }
                                 },
                               ),
-
-                              // Add some bottom padding for better scrolling
-                              const SizedBox(height: 100),
+                              // Add extra padding at bottom to ensure content is above button
+                              const SizedBox(height: 80),
                             ],
                           ),
                         ),
                       ),
                     ),
-                  ),
 
-                  // Fixed Compare Button at bottom
-                  SafeArea(
-                    top: false,
-                    bottom: false,
-                    child: Padding(
-                      padding: EdgeInsets.only(
-                        bottom: MediaQuery.of(context).padding.bottom + 20,
+                    // Compare button - full width on mobile
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.transparent,
+                            const Color(0xFF0A0E27),
+                            const Color(0xFF0A0E27),
+                          ],
+                          stops: [0.0, 0.3, 1.0],
+                        ),
                       ),
-                      child: _buildCompareButton(context, provider),
+                      padding: EdgeInsets.only(
+                        left: isMobile ? 16 : 20,
+                        right: isMobile ? 16 : 20,
+                        bottom: MediaQuery.of(context).padding.bottom + 16,
+                        top: 16,
+                      ),
+                      child: _buildCompareButton(context, provider, isMobile),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
+            ],
           ),
         );
       },
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, bool isMobile) {
     return Column(
       children: [
-        // App logo/title with animated effect
-        TweenAnimationBuilder<double>(
-          duration: const Duration(milliseconds: 1200),
-          tween: Tween(begin: 0.0, end: 1.0),
-          builder: (context, value, child) {
+        // Animated logo (smaller on mobile)
+        AnimatedBuilder(
+          animation: _pulseAnimation,
+          builder: (context, child) {
             return Transform.scale(
-              scale: 0.8 + (value * 0.2),
-              child: Opacity(
-                opacity: value,
-                child: Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        Theme.of(context).colorScheme.primary.withOpacity(0.2),
-                        Theme.of(
-                          context,
-                        ).colorScheme.secondary.withOpacity(0.2),
-                      ],
-                    ),
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.primary.withOpacity(0.3),
-                        blurRadius: 30,
-                        spreadRadius: 5,
-                      ),
+              scale: _pulseAnimation.value,
+              child: Container(
+                width: isMobile ? 80 : 120,
+                height: isMobile ? 80 : 120,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      Colors.cyanAccent.withOpacity(0.3),
+                      Colors.purpleAccent.withOpacity(0.3),
+                      Colors.transparent,
                     ],
                   ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.cyanAccent.withOpacity(0.5),
+                      blurRadius: 30,
+                      spreadRadius: 10,
+                    ),
+                  ],
+                ),
+                child: Center(
                   child: Icon(
                     Icons.timeline,
-                    size: 60,
-                    color: Theme.of(context).colorScheme.primary,
+                    size: isMobile ? 40 : 60,
+                    color: Colors.white,
                   ),
                 ),
               ),
             );
           },
         ),
-        const SizedBox(height: 24),
-        Text(
-          'ChronoHistory',
-          style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.onSurface,
-            letterSpacing: 1.2,
+        SizedBox(height: isMobile ? 20 : 30),
+
+        // Title with glow effect (smaller on mobile)
+        ShaderMask(
+          shaderCallback: (bounds) => LinearGradient(
+            colors: [Colors.cyanAccent, Colors.purpleAccent],
+          ).createShader(bounds),
+          child: Text(
+            'ChronoHistory',
+            style: TextStyle(
+              fontSize: isMobile ? 28 : 40,
+              fontWeight: FontWeight.w200,
+              letterSpacing: isMobile ? 4 : 6,
+              color: Colors.white,
+            ),
           ),
-          textAlign: TextAlign.center,
         ),
         const SizedBox(height: 8),
+
         Text(
-          'Compare Historical Categories',
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: Theme.of(context).colorScheme.primary,
+          'Timeline Comparison Engine',
+          style: TextStyle(
+            fontSize: isMobile ? 14 : 18,
+            fontWeight: FontWeight.w300,
+            color: Colors.white.withOpacity(0.7),
+            letterSpacing: isMobile ? 1 : 2,
           ),
-          textAlign: TextAlign.center,
         ),
-        const SizedBox(height: 12),
-        Text(
-          'Select two categories to explore their timelines in an immersive 3D chronological view with dynamic zoom and rotation',
-          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-            height: 1.4,
+        SizedBox(height: isMobile ? 16 : 20),
+
+        Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: isMobile ? 16 : 24,
+            vertical: isMobile ? 8 : 12,
           ),
-          textAlign: TextAlign.center,
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(30),
+            border: Border.all(color: Colors.white.withOpacity(0.1)),
+          ),
+          child: Text(
+            'Select two categories to explore their parallel histories',
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.6),
+              fontSize: isMobile ? 12 : 14,
+              letterSpacing: 0.5,
+            ),
+            textAlign: TextAlign.center,
+          ),
         ),
       ],
     );
@@ -285,158 +348,337 @@ class _CategorySelectionViewState extends State<CategorySelectionView>
     ValueChanged<String> onSelected,
     Color accentColor,
     IconData icon,
-    bool isNarrowScreen, // Added parameter
+    bool isNarrowScreen,
+    bool isFirst,
+    bool isMobile,
   ) {
-    return Container(
-      // Added height constraints for narrow screens to prevent unbounded growth in Column
-      height: isNarrowScreen && selectedCategory == null
-          ? 450
-          : null, // Adjust height as needed, only when grid is visible
-      constraints: isNarrowScreen && selectedCategory == null
-          ? const BoxConstraints(maxHeight: 500)
-          : null,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        color: Theme.of(context).colorScheme.surface,
-        boxShadow: [
-          BoxShadow(
-            color: accentColor.withOpacity(0.1),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(isMobile ? 20 : 24),
+      child: BackdropFilter(
+        filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          constraints: BoxConstraints(
+            maxHeight: isNarrowScreen && selectedCategory == null
+                ? (isMobile ? 400 : 500)
+                : double.infinity,
           ),
-        ],
-        border: Border.all(
-          color: selectedCategory != null
-              ? accentColor.withOpacity(0.5)
-              : Colors.transparent,
-          width: 2,
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize
-              .min, // Added to make the card shrink vertically to content
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: accentColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(icon, color: accentColor, size: 20),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: accentColor,
-                    ),
-                  ),
-                ),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(isMobile ? 20 : 24),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                accentColor.withOpacity(0.1),
+                accentColor.withOpacity(0.05),
               ],
             ),
-
-            const SizedBox(height: 20),
-
-            // Selected Category Display
-            if (selectedCategory != null) ...[
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: accentColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: accentColor.withOpacity(0.3)),
-                ),
-                child: Row(
+            border: Border.all(
+              color: selectedCategory != null
+                  ? accentColor.withOpacity(0.5)
+                  : accentColor.withOpacity(0.2),
+              width: 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: accentColor.withOpacity(0.2),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: EdgeInsets.all(isMobile ? 16 : 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header
+                Row(
                   children: [
-                    Icon(
-                      _getCategoryIcon(selectedCategory),
-                      color: accentColor,
-                      size: 24,
+                    Container(
+                      padding: EdgeInsets.all(isMobile ? 8 : 10),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            accentColor.withOpacity(0.3),
+                            accentColor.withOpacity(0.1),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        icon,
+                        color: accentColor,
+                        size: isMobile ? 20 : 24,
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: Text(
-                        selectedCategory,
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            style: TextStyle(
+                              fontSize: isMobile ? 16 : 18,
+                              fontWeight: FontWeight.w300,
                               color: accentColor,
-                              fontWeight: FontWeight.w600,
+                              letterSpacing: 1,
                             ),
+                          ),
+                          Text(
+                            isFirst
+                                ? 'Primary Timeline'
+                                : 'Comparison Timeline',
+                            style: TextStyle(
+                              fontSize: isMobile ? 11 : 12,
+                              color: Colors.white.withOpacity(0.5),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    IconButton(
-                      onPressed: () => setState(() {
-                        if (title.contains('First')) {
-                          _selectedCategory1 = null;
-                        } else {
-                          _selectedCategory2 = null;
-                        }
-                      }),
-                      icon: Icon(Icons.clear, color: accentColor, size: 20),
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(height: 16),
-            ],
+                SizedBox(height: isMobile ? 16 : 24),
 
-            // Category Grid
-            // Removed Expanded here. The GridView and _buildSelectedCategoryInfo will determine their own height.
-            selectedCategory == null
-                ? LayoutBuilder(
-                    // Added LayoutBuilder for responsive GridView
-                    builder: (context, constraints) {
-                      bool useSingleColumnGrid = constraints.maxWidth < 300;
-                      int crossAxisCount = useSingleColumnGrid ? 1 : 2;
-                      double childAspectRatio = useSingleColumnGrid
-                          ? 2.8
-                          : 1.2; // Adjusted for single column
-
-                      return GridView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: crossAxisCount, // Responsive
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
-                          childAspectRatio: childAspectRatio, // Responsive
-                        ),
-                        itemCount: categories.length,
-                        itemBuilder: (context, index) {
-                          final category = categories[index];
-                          final isDisabled =
-                              (title.contains('First') &&
-                                  category == _selectedCategory2) ||
-                              (title.contains('Second') &&
-                                  category == _selectedCategory1);
-
-                          return _buildCategoryCard(
-                            context,
-                            category,
-                            accentColor,
-                            isDisabled,
-                            () => onSelected(category),
-                          );
-                        },
-                      );
-                    },
-                  )
-                : _buildSelectedCategoryInfo(
+                // Selected category or grid
+                if (selectedCategory != null) ...[
+                  _buildSelectedCategoryDisplay(
                     context,
                     selectedCategory,
                     accentColor,
+                    () => setState(() {
+                      if (isFirst) {
+                        _selectedCategory1 = null;
+                      } else {
+                        _selectedCategory2 = null;
+                      }
+                    }),
+                    isMobile,
                   ),
-          ],
+                ] else ...[
+                  _buildCategoryGrid(
+                    context,
+                    categories,
+                    accentColor,
+                    isFirst,
+                    onSelected,
+                    isMobile,
+                  ),
+                ],
+              ],
+            ),
+          ),
         ),
       ),
+    );
+  }
+
+  Widget _buildSelectedCategoryDisplay(
+    BuildContext context,
+    String category,
+    Color accentColor,
+    VoidCallback onClear,
+    bool isMobile,
+  ) {
+    return Consumer<TimelineProvider>(
+      builder: (context, provider, child) {
+        final events = provider.eventsByCategory[category] ?? [];
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Selected category card
+            Container(
+              padding: EdgeInsets.all(isMobile ? 16 : 20),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    accentColor.withOpacity(0.2),
+                    accentColor.withOpacity(0.1),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: accentColor.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    _getCategoryIcon(category),
+                    color: accentColor,
+                    size: isMobile ? 28 : 32,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          category,
+                          style: TextStyle(
+                            fontSize: isMobile ? 18 : 20,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                        Text(
+                          '${events.length} events',
+                          style: TextStyle(
+                            fontSize: isMobile ? 12 : 14,
+                            color: accentColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: onClear,
+                    icon: Icon(Icons.close, color: accentColor),
+                    style: IconButton.styleFrom(
+                      backgroundColor: accentColor.withOpacity(0.1),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // Timeline preview
+            Text(
+              'Timeline Preview',
+              style: TextStyle(
+                fontSize: isMobile ? 12 : 14,
+                fontWeight: FontWeight.w300,
+                color: accentColor,
+                letterSpacing: 1,
+              ),
+            ),
+            const SizedBox(height: 8),
+
+            // Preview events (show only 2 on mobile to save space)
+            ...events
+                .take(isMobile ? 2 : 3)
+                .map(
+                  (event) => Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: EdgeInsets.all(isMobile ? 10 : 12),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.03),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: accentColor.withOpacity(0.2),
+                        width: 0.5,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 3,
+                          height: isMobile ? 32 : 40,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                accentColor.withOpacity(0.8),
+                                accentColor.withOpacity(0.2),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                event.title,
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.8),
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: isMobile ? 13 : 14,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              Text(
+                                '${event.startDate.year}',
+                                style: TextStyle(
+                                  color: accentColor,
+                                  fontSize: isMobile ? 11 : 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+            if (events.length > (isMobile ? 2 : 3))
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  '+${events.length - (isMobile ? 2 : 3)} more events',
+                  style: TextStyle(
+                    color: accentColor.withOpacity(0.7),
+                    fontSize: isMobile ? 11 : 12,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildCategoryGrid(
+    BuildContext context,
+    List<String> categories,
+    Color accentColor,
+    bool isFirst,
+    ValueChanged<String> onSelected,
+    bool isMobile,
+  ) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final crossAxisCount = constraints.maxWidth < 250 ? 1 : 2;
+
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
+            childAspectRatio: crossAxisCount == 1
+                ? 3.5
+                : (isMobile ? 1.8 : 1.5),
+          ),
+          itemCount: categories.length,
+          itemBuilder: (context, index) {
+            final category = categories[index];
+            final isDisabled =
+                (isFirst && category == _selectedCategory2) ||
+                (!isFirst && category == _selectedCategory1);
+
+            return _buildCategoryCard(
+              context,
+              category,
+              accentColor,
+              isDisabled,
+              () => onSelected(category),
+              isMobile,
+            );
+          },
+        );
+      },
     );
   }
 
@@ -446,6 +688,7 @@ class _CategorySelectionViewState extends State<CategorySelectionView>
     Color accentColor,
     bool isDisabled,
     VoidCallback onTap,
+    bool isMobile,
   ) {
     return Material(
       color: Colors.transparent,
@@ -453,46 +696,77 @@ class _CategorySelectionViewState extends State<CategorySelectionView>
         onTap: isDisabled ? null : onTap,
         borderRadius: BorderRadius.circular(12),
         child: Container(
-          padding: const EdgeInsets.all(
-            8,
-          ), // Added padding to give content some space
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
-            color: isDisabled
-                ? Theme.of(
-                    context,
-                  ).colorScheme.surfaceContainerHighest.withOpacity(0.3)
-                : accentColor.withOpacity(0.05),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: isDisabled
+                  ? [
+                      Colors.grey.withOpacity(0.1),
+                      Colors.grey.withOpacity(0.05),
+                    ]
+                  : [
+                      accentColor.withOpacity(0.1),
+                      accentColor.withOpacity(0.05),
+                    ],
+            ),
             border: Border.all(
               color: isDisabled
-                  ? Colors.transparent
-                  : accentColor.withOpacity(0.2),
+                  ? Colors.grey.withOpacity(0.2)
+                  : accentColor.withOpacity(0.3),
+              width: 0.5,
             ),
           ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+          child: Stack(
             children: [
-              Icon(
-                _getCategoryIcon(category),
-                color: isDisabled
-                    ? Theme.of(context).colorScheme.onSurface.withOpacity(0.3)
-                    : accentColor,
-                size: 20, // Reduced icon size slightly
-              ),
-              const SizedBox(height: 4), // Reduced spacing
-              Text(
-                category,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: isDisabled
-                      ? Theme.of(context).colorScheme.onSurface.withOpacity(0.3)
-                      : accentColor,
-                  fontWeight: FontWeight.w500,
-                  fontSize: 10, // Reduced font size slightly
+              if (!isDisabled)
+                Positioned(
+                  top: -20,
+                  right: -20,
+                  child: Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          accentColor.withOpacity(0.2),
+                          Colors.transparent,
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
-                textAlign: TextAlign.center,
-                maxLines: 2, // Allow text to wrap to a second line
-                overflow:
-                    TextOverflow.ellipsis, // Add ellipsis if it still overflows
+              Padding(
+                padding: EdgeInsets.all(isMobile ? 8 : 12),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      _getCategoryIcon(category),
+                      color: isDisabled
+                          ? Colors.grey.withOpacity(0.5)
+                          : accentColor,
+                      size: isMobile ? 20 : 24,
+                    ),
+                    SizedBox(height: isMobile ? 4 : 8),
+                    Text(
+                      category,
+                      style: TextStyle(
+                        color: isDisabled
+                            ? Colors.grey.withOpacity(0.5)
+                            : Colors.white.withOpacity(0.8),
+                        fontWeight: FontWeight.w300,
+                        fontSize: isMobile ? 11 : 12,
+                        letterSpacing: 0.5,
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -501,149 +775,138 @@ class _CategorySelectionViewState extends State<CategorySelectionView>
     );
   }
 
-  Widget _buildSelectedCategoryInfo(
-    BuildContext context,
-    String category,
-    Color accentColor,
-  ) {
-    return Consumer<TimelineProvider>(
-      builder: (context, provider, child) {
-        final categoryEvents = provider.eventsByCategory[category] ?? [];
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize:
-              MainAxisSize.min, // Added to ensure Column takes minimum space
-          children: [
-            Text(
-              'Timeline Preview',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                color: accentColor,
-                fontWeight: FontWeight.bold,
+  Widget _buildVsIndicator(BuildContext context, bool isMobile) {
+    return AnimatedBuilder(
+      animation: _pulseAnimation,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: _pulseAnimation.value,
+          child: Container(
+            width: isMobile ? 60 : 80,
+            height: isMobile ? 60 : 80,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.cyanAccent.withOpacity(0.3),
+                  Colors.purpleAccent.withOpacity(0.3),
+                ],
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.cyanAccent.withOpacity(0.3),
+                  blurRadius: 20,
+                  offset: const Offset(-5, 0),
+                ),
+                BoxShadow(
+                  color: Colors.purpleAccent.withOpacity(0.3),
+                  blurRadius: 20,
+                  offset: const Offset(5, 0),
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
-            // Removed Expanded here. ListView will determine its own height with shrinkWrap.
-            ListView.builder(
-              shrinkWrap: true, // Added
-              physics: const NeverScrollableScrollPhysics(), // Added
-              itemCount: categoryEvents.take(3).length,
-              itemBuilder: (context, index) {
-                final event = categoryEvents[index];
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: accentColor.withOpacity(0.05),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: accentColor.withOpacity(0.1)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        event.title,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      Text(
-                        '${event.date.year}',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: accentColor,
-                          fontSize: 10,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-            if (categoryEvents.length > 3)
-              Text(
-                '+${categoryEvents.length - 3} more events',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: accentColor.withOpacity(0.7),
-                  fontStyle: FontStyle.italic,
+            child: Center(
+              child: Text(
+                'VS',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w200,
+                  fontSize: isMobile ? 20 : 24,
+                  letterSpacing: 3,
                 ),
               ),
-          ],
+            ),
+          ),
         );
       },
     );
   }
 
-  Widget _buildVsIndicator(BuildContext context) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Container(
-          width: 60,
-          height: 60,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: LinearGradient(
-              colors: [
-                Theme.of(context).colorScheme.primary,
-                Theme.of(context).colorScheme.secondary,
-              ],
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
-                blurRadius: 15,
-                offset: const Offset(0, 5),
-              ),
-            ],
-          ),
-          child: const Center(
-            child: Text(
-              'VS',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCompareButton(BuildContext context, TimelineProvider provider) {
-    bool canCompare =
+  Widget _buildCompareButton(
+    BuildContext context,
+    TimelineProvider provider,
+    bool isMobile,
+  ) {
+    final canCompare =
         _selectedCategory1 != null &&
         _selectedCategory2 != null &&
         _selectedCategory1 != _selectedCategory2;
 
-    return ElevatedButton.icon(
-      icon: const Icon(Icons.compare_arrows, size: 28),
-      label: const Text('Compare Timelines', style: TextStyle(fontSize: 18)),
-      style: ElevatedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-        backgroundColor: canCompare
-            ? Theme.of(context).colorScheme.primary
-            : Colors.grey.withOpacity(0.5),
-        foregroundColor: canCompare
-            ? Theme.of(context).colorScheme.onPrimary
-            : Colors.white.withOpacity(0.7),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        elevation: canCompare ? 5 : 0,
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: canCompare
+              ? () {
+                  provider.setComparisonCategories(
+                    _selectedCategory1!,
+                    _selectedCategory2!,
+                  );
+                  provider.setCurrentView('chrono_comparison');
+                }
+              : null,
+          borderRadius: BorderRadius.circular(30),
+          child: Container(
+            width: double.infinity, // Full width
+            padding: EdgeInsets.symmetric(
+              horizontal: isMobile ? 24 : 40,
+              vertical: isMobile ? 14 : 16,
+            ),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: canCompare
+                    ? [Colors.cyanAccent, Colors.purpleAccent]
+                    : [
+                        Colors.grey.withOpacity(0.3),
+                        Colors.grey.withOpacity(0.3),
+                      ],
+              ),
+              borderRadius: BorderRadius.circular(30),
+              boxShadow: canCompare
+                  ? [
+                      BoxShadow(
+                        color: Colors.cyanAccent.withOpacity(0.5),
+                        blurRadius: 20,
+                        offset: const Offset(-5, 5),
+                      ),
+                      BoxShadow(
+                        color: Colors.purpleAccent.withOpacity(0.5),
+                        blurRadius: 20,
+                        offset: const Offset(5, 5),
+                      ),
+                    ]
+                  : [],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.compare_arrows,
+                  color: canCompare
+                      ? Colors.white
+                      : Colors.grey.withOpacity(0.5),
+                  size: isMobile ? 22 : 24,
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'Compare Timelines',
+                  style: TextStyle(
+                    color: canCompare
+                        ? Colors.white
+                        : Colors.grey.withOpacity(0.5),
+                    fontSize: isMobile ? 15 : 16,
+                    fontWeight: FontWeight.w300,
+                    letterSpacing: isMobile ? 1.5 : 2,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
-      onPressed: canCompare
-          ? () {
-              if (_selectedCategory1 != null && _selectedCategory2 != null) {
-                provider.setComparisonCategories(
-                  _selectedCategory1!,
-                  _selectedCategory2!,
-                );
-                provider.setCurrentView('chrono_comparison');
-              }
-            }
-          : null, // Disable button if conditions are not met
     );
   }
 
@@ -666,4 +929,63 @@ class _CategorySelectionViewState extends State<CategorySelectionView>
     };
     return icons[category] ?? Icons.event;
   }
+}
+
+// Animated particles painter for background effect
+class ParticlesPainter extends CustomPainter {
+  final Animation<double> animation;
+  final random = math.Random();
+  final List<Particle> particles = [];
+
+  ParticlesPainter({required this.animation}) : super(repaint: animation) {
+    // Initialize particles with random positions
+    for (int i = 0; i < 30; i++) {
+      particles.add(
+        Particle(
+          x: random.nextDouble(),
+          y: random.nextDouble(),
+          size: random.nextDouble() * 2 + 1,
+          speed: random.nextDouble() * 0.2 + 0.1, // Slower speed
+        ),
+      );
+    }
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..style = PaintingStyle.fill;
+
+    for (var particle in particles) {
+      // Update particle position based on animation
+      final y = (particle.y - animation.value * particle.speed) % 1.0;
+      final adjustedY = y < 0 ? y + 1 : y;
+
+      // Calculate opacity based on vertical position
+      final opacity = math.sin(adjustedY * math.pi) * 0.3;
+
+      paint.color = Colors.cyanAccent.withOpacity(opacity);
+      canvas.drawCircle(
+        Offset(particle.x * size.width, adjustedY * size.height),
+        particle.size,
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(ParticlesPainter oldDelegate) => true;
+}
+
+class Particle {
+  final double x;
+  final double y;
+  final double size;
+  final double speed;
+
+  Particle({
+    required this.x,
+    required this.y,
+    required this.size,
+    required this.speed,
+  });
 }
